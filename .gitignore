@@ -1,0 +1,27 @@
+# 敏感信息
+.env
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+*.egg-info/
+dist/
+build/
+
+# 数据
+data/raw/
+data/processed/
+data/kg/
+data/chroma_db/
+data/logs/
+
+# IDE
+.vscode/
+.idea/
+
+# 系统
+.DS_Store
+Thumbs.db
+*.tmp
