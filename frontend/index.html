@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>山海镜</title>
+</head>
+<body>
+    <div id="app">
+        <!-- 搜索框 -->
+        <input v-model="query" @keyup.enter="search" placeholder="输入地名，回车搜索...">
+
+        <!-- 加载中 -->
+        <p v-if="loading">加载中...</p>
+
+        <!-- 加载失败 -->
+        <p v-else-if="error">{{ error }}</p>
+
+        <!-- 加载成功 -->
+        <div v-else-if="entity.name">
+            <h2>{{ entity.name }}</h2>
+            <p>类型：{{ entity.type }}</p>
+            <p v-if="entity.elevation">海拔：{{ entity.elevation }}m</p>
+            <p v-if="entity.province">省份：{{ entity.province }}</p>
+            <p v-if="entity.provinces">流经省份：{{ entity.provinces.join('、') }}</p>
+        </div>
+    </div>
+
+    <!-- Vue 3 -->
+    <script src="https://fastly.jsdelivr.net/npm/vue@3/dist/vue.global.js"></script>
+
+    <script>
+        const { createApp, ref } = Vue
+
+        createApp({
+            setup() {
+                const query = ref('')        // 搜索框输入
+                const entity = ref({})       // 后端返回的数据
+                const loading = ref(false)   // 是否在加载（初始不加载）
+                const error = ref('')        // 错误信息
+
+                async function search() {
+                    if (!query.value.trim()) return
+                    loading.value = true
+                    error.value = ''
+                    entity.value = {}
+                    try {
+                        const resp = await fetch(`/api/v1/entities/${query.value}`)
+                        if (!resp.ok) throw new Error('未找到：' + resp.status)
+                        entity.value = await resp.json()
+                    } catch (e) {
+                        error.value = e.message
+                    } finally {
+                        loading.value = false
+                    }
+                }
+
+                return { query, entity, loading, error, search }
+            }
+        }).mount('#app')
+    </script>
+</body>
+</html>

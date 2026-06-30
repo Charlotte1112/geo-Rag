@@ -1,0 +1,762 @@
+<!DOCTYPE html>
+<html lang='zh-CN'>
+<head>
+<meta charset='UTF-8'>
+<style>
+body { font-family: 'Microsoft YaHei', sans-serif; max-width: 800px; margin: 40px auto; padding: 0 20px; line-height: 1.8; color: #333; }
+h1 { text-align: center; font-size: 22px; border-bottom: 2px solid #333; padding-bottom: 10px; }
+h2 { font-size: 18px; border-bottom: 1px solid #999; padding-bottom: 5px; margin-top: 30px; }
+h3 { font-size: 15px; margin-top: 20px; }
+table { border-collapse: collapse; width: 100%; margin: 15px 0; font-size: 13px; }
+th, td { border: 1px solid #999; padding: 6px 10px; text-align: left; }
+th { background: #f0f0f0; }
+code { background: #f5f5f5; padding: 1px 4px; border-radius: 3px; }
+pre { background: #f5f5f5; padding: 12px; border-radius: 5px; overflow-x: auto; }
+blockquote { border-left: 3px solid #ccc; padding-left: 15px; color: #666; }
+</style>
+</head>
+<body><h1>山海镜 —— 基于知识图谱与RAG增强的多智能体地理信息检索系统</h1>
+<h2>选题报告</h2>
+<hr />
+<h2>一、选题目的</h2>
+<h3>1.1 选题背景</h3>
+<p>当前高中生在学习地理知识时面临以下困境：</p>
+<p><strong>1. 现有 AI 问答工具缺乏可视化。</strong> 学生通过豆包、DeepSeek 等大模型查询地理问题（如"解释向斜背斜"），能得到文字描述，但无法直观看到该地质现象在地图上的实际位置和地形表现。纯文本回答导致学生只能机械记忆答案，难以建立空间理解和感性认知。</p>
+<p><strong>2. 地理知识与地图脱节。</strong> 传统地图应用（高德、百度地图）能定位地点，但不具备地理教学能力；AI 问答能解释概念，却无法联动地图进行空间演示。学生在"知道概念"和"看到现象"之间存在断层。</p>
+<p><strong>3. 视频学习效率低下。</strong> B 站、抖音等平台虽有大量地理教学视频，但质量参差不齐、内容散乱，学生需要耗费大量时间筛选，且需在视频 App 和问答工具之间反复切换，学习流程割裂。</p>
+<p><strong>4. 缺乏交互式学习闭环。</strong> 现有工具多为单向输出——要么给文字答案，要么播放视频——缺乏"提问→定位→演示→追问→直到理解"的完整学习循环。学生在不理解某个知识点时，无法就地追问、深入探究。</p>
+<p>针对以上痛点，本文设计并实现<strong>山海镜</strong>——一个基于知识图谱与 RAG 增强的多智能体地理学习系统。该系统将大模型对话、地图可视化、视频检索与总结、语音交互整合为一体，为高中生提供"在地图上学习地理"的全新体验。</p>
+<h3>1.2 同类系统分析</h3>
+<table>
+<thead>
+<tr>
+<th>类别</th>
+<th>代表产品</th>
+<th>优势</th>
+<th>不足</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>通用 AI 问答</td>
+<td>DeepSeek、豆包、Kimi</td>
+<td>文本回答能力强，覆盖知识面广</td>
+<td>纯文本输出，无地图联动，无法可视化；回答偏理论，缺乏空间直观</td>
+</tr>
+<tr>
+<td>地图应用</td>
+<td>高德地图、百度地图、Google Earth</td>
+<td>定位精准，地图数据丰富</td>
+<td>不具备地理教学能力，无法解释地质现象、分析地形成因</td>
+</tr>
+<tr>
+<td>搜题工具</td>
+<td>作业帮、小猿搜题</td>
+<td>题库丰富，拍照识别快</td>
+<td>偏重解题而非理解，缺乏互动追问，地理空间类题目展示不足</td>
+</tr>
+<tr>
+<td>在线教育</td>
+<td>学而思网校、猿辅导</td>
+<td>课程体系完整，师资专业</td>
+<td>一对多单向教学，无法个性化实时答疑，缺乏自主探索能力</td>
+</tr>
+<tr>
+<td>视频平台</td>
+<td>B 站、抖音知识区</td>
+<td>视频量大，部分内容优质</td>
+<td>质量良莠不齐，筛选耗时；与学习工具割裂，需跳转观看</td>
+</tr>
+</tbody>
+</table>
+<p><strong>山海镜的差异化定位</strong>：上述系统分别在"问答""地图""搜题""教学""视频"某一维度上具有优势，但没有一个系统将<strong>多智能体AI对话 + 地图联动定位 + 视频检索总结 + 语音交互</strong>整合为一个完整的地理学习闭环。山海镜的核心创新在于：让学生在地图上直接"看见"地理知识，通过AI对话持续追问直到真正理解，并在应用内完成视频学习与总结。</p>
+<hr />
+<h2>二、系统分析</h2>
+<h3>2.1 需求分析</h3>
+<h4>功能需求</h4>
+<table>
+<thead>
+<tr>
+<th>编号</th>
+<th>功能</th>
+<th>描述</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>F1</td>
+<td>地理知识问答</td>
+<td>用户输入地理问题，系统调用 LLM 生成回答，支持多轮追问</td>
+</tr>
+<tr>
+<td>F2</td>
+<td>地图联动定位</td>
+<td>识别问题中的地名，自动将地图飞行定位到该地点，添加标记与信息窗</td>
+</tr>
+<tr>
+<td>F3</td>
+<td>地理实体识别</td>
+<td>从用户问题中自动提取地理实体（山、河、湖、省、市等）</td>
+</tr>
+<tr>
+<td>F4</td>
+<td>知识图谱查询</td>
+<td>返回地理实体的关系网络（属于哪个山脉、发源于何处、流经哪些省份等）</td>
+</tr>
+<tr>
+<td>F5</td>
+<td>景观图片展示</td>
+<td>展示地理实体的实景图片，横向滑动浏览</td>
+</tr>
+<tr>
+<td>F6</td>
+<td>视频检索与总结</td>
+<td>根据地理关键词检索 B 站/抖音相关教学视频，内嵌播放，并自动生成视频内容摘要</td>
+</tr>
+<tr>
+<td>F7</td>
+<td>语音输入</td>
+<td>支持语音输入问题，方便学生快速提问</td>
+</tr>
+<tr>
+<td>F8</td>
+<td>探索历史</td>
+<td>保存最近 50 条探索记录，支持回看</td>
+</tr>
+<tr>
+<td>F9</td>
+<td>知识图谱可视化</td>
+<td>全屏 ECharts 力导向图展示实体关系网络，支持触摸互动</td>
+</tr>
+</tbody>
+</table>
+<h4>非功能需求</h4>
+<table>
+<thead>
+<tr>
+<th>编号</th>
+<th>需求</th>
+<th>描述</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>NF1</td>
+<td>响应时间</td>
+<td>问答接口 p95 &lt; 5 秒</td>
+</tr>
+<tr>
+<td>NF2</td>
+<td>移动端适配</td>
+<td>支持 iOS/Android 手机浏览器访问，PWA 可安装到桌面</td>
+</tr>
+<tr>
+<td>NF3</td>
+<td>用户体验</td>
+<td>界面友好，适合高中生操作习惯，降低学习门槛</td>
+</tr>
+<tr>
+<td>NF4</td>
+<td>可扩展性</td>
+<td>知识库可扩充（添加新 PDF 文献更新知识）</td>
+</tr>
+<tr>
+<td>NF5</td>
+<td>低成本运行</td>
+<td>使用 DeepSeek 等国产低价 API，整体运行成本可控</td>
+</tr>
+</tbody>
+</table>
+<h3>2.2 可行性分析</h3>
+<h4>技术可行性</h4>
+<table>
+<thead>
+<tr>
+<th>模块</th>
+<th>技术方案</th>
+<th>成熟度</th>
+<th>风险</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>LLM 对话</td>
+<td>DeepSeek API</td>
+<td>业界成熟</td>
+<td>低：API 稳定可用</td>
+</tr>
+<tr>
+<td>地图定位</td>
+<td>高德地图 JS API 2.0</td>
+<td>业界成熟</td>
+<td>低：需申请 Key</td>
+</tr>
+<tr>
+<td>语音识别</td>
+<td>Web Speech API（浏览器原生）</td>
+<td>成熟，Chrome/Safari 支持</td>
+<td>低</td>
+</tr>
+<tr>
+<td>知识图谱</td>
+<td>NetworkX + 规则/LLM 三元组抽取</td>
+<td>方案可行，规模可控</td>
+<td>中：抽取精度依赖 Prompt 设计</td>
+</tr>
+<tr>
+<td>RAG 检索</td>
+<td>ChromaDB + BGE Embedding + BM25</td>
+<td>业界成熟</td>
+<td>低：小型知识库性能无忧</td>
+</tr>
+<tr>
+<td>多智能体</td>
+<td>LangGraph Agent 编排</td>
+<td>业界前沿</td>
+<td>中：编排逻辑需调试</td>
+</tr>
+<tr>
+<td>PWA</td>
+<td>Service Worker + Manifest</td>
+<td>业界成熟</td>
+<td>低</td>
+</tr>
+<tr>
+<td>视频内嵌</td>
+<td>B 站/抖音嵌入式播放器</td>
+<td>方案可行</td>
+<td>中：部分平台有跨域限制</td>
+</tr>
+</tbody>
+</table>
+<p><strong>结论</strong>：所有核心技术均有成熟方案或可行替代方案，技术风险可控。</p>
+<h4>开发可行性</h4>
+<ul>
+<li><strong>开发周期</strong>：15 天，单人全栈开发</li>
+<li><strong>每日投入</strong>：10 小时，总计 150 小时</li>
+<li><strong>技术栈覆盖</strong>：Python（FastAPI）+ JavaScript（Vue 3）+ 多个第三方 API</li>
+<li><strong>风险缓解</strong>：每个模块预留 1 天缓冲时间，关键路径优先实现</li>
+</ul>
+<p><strong>结论</strong>：在合理的时间管理与任务切分下，开发目标可达成。</p>
+<h4>应用可行性</h4>
+<ul>
+<li><strong>目标用户</strong>：高中地理学生，对地理学习有可视化、互动化需求</li>
+<li><strong>使用场景</strong>：课堂辅助学习、课后自主探索、考前知识点复习</li>
+<li><strong>推广方式</strong>：PWA 无需安装，扫码即用，降低使用门槛</li>
+</ul>
+<hr />
+<h2>三、系统设计</h2>
+<h3>3.1 系统架构</h3>
+<pre><code>┌─────────────────────────────────────────────────────────────┐
+│                    移动端 PWA（Vue 3 + Vant UI）               │
+│  ┌─────────┐ ┌──────────┐ ┌──────────┐ ┌───────────────┐  │
+│  │ 语音输入 │ │ 对话界面  │ │ 地图组件 │ │ 视频播放面板   │  │
+│  └─────────┘ └──────────┘ └──────────┘ └───────────────┘  │
+└──────────────────────────┬──────────────────────────────────┘
+                           │ HTTP / SSE（流式）
+┌──────────────────────────┴──────────────────────────────────┐
+│                   FastAPI 后端（Python）                     │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │          多智能体协作层（LangGraph 编排）              │   │
+│  │                                                     │   │
+│  │  🎯Orchestrator → [🌍Geo ‖ 🔗KG ‖ 📄RAG ‖ 🎬Video]  │   │
+│  │                → ✍️Synthesis → 🛡️Critique           │   │
+│  └─────────────────────────────────────────────────────┘   │
+│  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐    │
+│  │ 地理编码  │ │ KG 查询  │ │ RAG 检索 │ │ 视频检索  │    │
+│  │(高德API) │ │(NetworkX)│ │(ChromaDB)│ │(B站/抖音) │    │
+│  └──────────┘ └──────────┘ └──────────┘ └──────────┘    │
+└──────────────────────────────────────────────────────────┘
+                           │
+┌──────────────────────────┴──────────────────────────────────┐
+│                   数据层                                     │
+│  PDF 文献 → 解析 → NER → 三元组提取 → KG 构建 + RAG 索引    │
+│  地图数据（高德API） ｜ 视频元数据 ｜ 景观图片库               │
+└──────────────────────────────────────────────────────────┘
+</code></pre>
+<p><strong>数据流</strong>：
+1. 用户通过语音或文字提问
+2. Orchestrator Agent 分析查询意图，分解任务
+3. GeoAgent、KGAgent、RAGAgent、VideoAgent 并行执行各自子任务
+4. SynthesisAgent 融合所有结果，生成回答
+5. CritiqueAgent 核查事实准确性
+6. 前端渲染：地图定位 + 知识卡片 + 景观图片 + 视频面板 + 对话回答</p>
+<h3>3.2 功能设计</h3>
+<h4>功能模块划分</h4>
+<pre><code>山海镜
+├── 🏠 探索模块（主页面）
+│   ├── 搜索框（文字 + 语音输入）
+│   ├── 高德地图（飞行定位、标记、信息窗）
+│   ├── 答案卡片（LLM 生成 + 来源引用）
+│   ├── 知识图谱关系展示
+│   ├── 景观图片画廊（横向滑动）
+│   └── 相关实体推荐
+├── 🎬 学习模块
+│   ├── 视频检索（B 站/抖音）
+│   ├── 视频内嵌播放
+│   └── AI 视频内容总结
+├── 📜 历史模块
+│   └── 最近 50 条探索记录
+├── 📊 图谱模块
+│   └── 全屏 ECharts 知识图谱可视化
+└── 👤 我的模块
+    ├── 知识库统计
+    └── 关于页面
+</code></pre>
+<h3>3.3 数据库设计</h3>
+<h4>知识图谱 Schema</h4>
+<p><strong>实体类型（Node Types）</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>类型</th>
+<th>核心属性</th>
+<th>示例</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>MountainRange</td>
+<td>name, aliases, elevation_max, length_km, provinces</td>
+<td>秦岭</td>
+</tr>
+<tr>
+<td>Mountain</td>
+<td>name, aliases, elevation, lat, lon, parent_range, province</td>
+<td>太白山</td>
+</tr>
+<tr>
+<td>River</td>
+<td>name, aliases, length_km, basin_area_km2, provinces</td>
+<td>长江</td>
+</tr>
+<tr>
+<td>Lake</td>
+<td>name, aliases, area_km2, elevation, province, lat, lon</td>
+<td>青海湖</td>
+</tr>
+<tr>
+<td>Province</td>
+<td>name, abbreviation, region, capital</td>
+<td>陕西省</td>
+</tr>
+<tr>
+<td>GeologicalStruct</td>
+<td>name, type, area_km2, age_period, lat, lon</td>
+<td>青藏高原</td>
+</tr>
+<tr>
+<td>ClimateZone</td>
+<td>name, type, avg_temp, avg_precipitation</td>
+<td>亚热带季风气候</td>
+</tr>
+</tbody>
+</table>
+<p><strong>关系类型（Edge Types）</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>关系</th>
+<th>From → To</th>
+<th>示例</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>LOCATED_IN</td>
+<td>山/河/湖 → 省/市</td>
+<td>太白山→陕西省</td>
+</tr>
+<tr>
+<td>BELONGS_TO</td>
+<td>山 → 山脉</td>
+<td>太白山→秦岭</td>
+</tr>
+<tr>
+<td>FLOWS_THROUGH</td>
+<td>河 → 省/市</td>
+<td>长江→四川省</td>
+</tr>
+<tr>
+<td>ORIGINATES_AT</td>
+<td>河 → 山脉/构造</td>
+<td>汉江→秦岭</td>
+</tr>
+<tr>
+<td>TRIBUTARY_OF</td>
+<td>河 → 河</td>
+<td>汉江→长江</td>
+</tr>
+<tr>
+<td>FLOWS_INTO</td>
+<td>河 → 湖/海/河</td>
+<td>长江→东海</td>
+</tr>
+<tr>
+<td>ADJACENT_TO</td>
+<td>山脉 ↔ 山脉</td>
+<td>秦岭↔大巴山</td>
+</tr>
+</tbody>
+</table>
+<h4>向量数据库（ChromaDB）</h4>
+<table>
+<thead>
+<tr>
+<th>Collection</th>
+<th>存储内容</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>geo_knowledge</td>
+<td>PDF 文献分块 + Embedding</td>
+<td>RAG 文档检索</td>
+</tr>
+<tr>
+<td>video_metadata</td>
+<td>视频标题/描述/标签 + Embedding</td>
+<td>视频语义搜索</td>
+</tr>
+</tbody>
+</table>
+<h4>本地存储</h4>
+<table>
+<thead>
+<tr>
+<th>数据</th>
+<th>格式</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>景观图片</td>
+<td>JPG/PNG 文件 + image_index.json</td>
+<td>实体名→图片路径映射</td>
+</tr>
+<tr>
+<td>知识图谱</td>
+<td>GraphML 文件</td>
+<td>NetworkX 序列化</td>
+</tr>
+<tr>
+<td>用户历史</td>
+<td>localStorage（浏览器端）</td>
+<td>探索记录</td>
+</tr>
+</tbody>
+</table>
+<h3>3.4 界面设计</h3>
+<h4>主页面（探索页）</h4>
+<pre><code>┌──────────────────────────────────────┐
+│  🌏 山海镜                           │  ← Header
+├──────────────────────────────────────┤
+│  ┌──────────────────────────────────┐│
+│  │ 🎤 🔍 输入地理问题...            ││  ← 搜索栏（支持语音）
+│  └──────────────────────────────────┘│
+├──────────────────────────────────────┤
+│  ┌──────────────────────────────────┐│
+│  │          🗺️ 高德地图              ││  ← 地图区域（40%屏高）
+│  │          自动飞行定位              ││
+│  └──────────────────────────────────┘│
+│  ┌──────────────────────────────────┐│
+│  │  📝 答案卡片                      ││
+│  │  LLM 生成的详细解答 + 来源引用     ││
+│  └──────────────────────────────────┘│
+│  ┌──────────────────────────────────┐│
+│  │  🖼️ 景观图片 [横向滑动]          ││
+│  └──────────────────────────────────┘│
+│  ┌──────────────────────────────────┐│
+│  │  🎬 相关学习视频 [可展开]        ││
+│  │  ┌──────┐ ┌──────┐             ││
+│  │  │视频1 │ │视频2 │  + AI总结    ││
+│  │  └──────┘ └──────┘             ││
+│  └──────────────────────────────────┘│
+│  ┌──────────────────────────────────┐│
+│  │  🔗 相关实体：[秦岭][大爷海]...  ││
+│  └──────────────────────────────────┘│
+├──────────────────────────────────────┤
+│  🏠探索  🎬学习  📜历史  📊图谱  👤我的│  ← TabBar
+└──────────────────────────────────────┘
+</code></pre>
+<h4>交互流程</h4>
+<pre><code>用户输入/语音 &quot;解释一下向斜背斜&quot;
+  → LLM 分析：实体&quot;向斜&quot;&quot;背斜&quot;，意图&quot;概念解释+空间演示&quot;
+  → 高德地图飞到典型地貌位置（如四川盆地边缘）
+  → 地图标记 + 地形图层展示
+  → LLM 生成解释文本 + 引用文献
+  → 检索 B 站相关教学视频，内嵌播放
+  → AI 自动总结视频要点
+  → 用户可继续追问：&quot;那地垒和地堑呢？&quot;
+</code></pre>
+<h3>3.5 技术选型</h3>
+<table>
+<thead>
+<tr>
+<th>层</th>
+<th>技术</th>
+<th>选型理由</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>多智能体框架</strong></td>
+<td>LangGraph</td>
+<td>状态图编排，支持条件分支+并行执行</td>
+</tr>
+<tr>
+<td><strong>后端框架</strong></td>
+<td>FastAPI (Python)</td>
+<td>异步高性能，自动 API 文档，Pydantic 校验</td>
+</tr>
+<tr>
+<td><strong>LLM</strong></td>
+<td>DeepSeek API</td>
+<td>中文最优，40-60 倍便宜于 GPT-4o，国内直连</td>
+</tr>
+<tr>
+<td><strong>前端框架</strong></td>
+<td>Vue 3 (CDN) + Vant UI 4</td>
+<td>移动端组件库，MVP 阶段 CDN 零配置</td>
+</tr>
+<tr>
+<td><strong>地图</strong></td>
+<td>高德地图 JS API 2.0</td>
+<td>中国地理最详细，GCJ02 坐标系</td>
+</tr>
+<tr>
+<td><strong>语音输入</strong></td>
+<td>Web Speech API</td>
+<td>浏览器原生支持，无需第三方</td>
+</tr>
+<tr>
+<td><strong>知识图谱</strong></td>
+<td>NetworkX + GraphML</td>
+<td>零运维，轻量级，适合小规模 KG</td>
+</tr>
+<tr>
+<td><strong>向量数据库</strong></td>
+<td>ChromaDB</td>
+<td>零配置，Python 原生，嵌入式部署</td>
+</tr>
+<tr>
+<td><strong>Embedding</strong></td>
+<td>bge-small-zh-v1.5</td>
+<td>中文语义最优，仅 200MB 显存</td>
+</tr>
+<tr>
+<td><strong>稀疏检索</strong></td>
+<td>rank-bm25 + jieba</td>
+<td>中文关键词精确匹配</td>
+</tr>
+<tr>
+<td><strong>视频检索</strong></td>
+<td>B 站/抖音开放 API</td>
+<td>内嵌播放器，无需跳转</td>
+</tr>
+<tr>
+<td><strong>部署</strong></td>
+<td>Docker + Nginx</td>
+<td>容器化，一次配置到处运行</td>
+</tr>
+<tr>
+<td><strong>PWA</strong></td>
+<td>Service Worker + Manifest</td>
+<td>可安装到手机桌面，离线缓存</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>四、执行计划</h2>
+<h3>4.1 开发周期</h3>
+<p>15 天 × 10 小时/天 = 150 小时，单人全栈开发。</p>
+<h3>4.2 详细计划</h3>
+<table>
+<thead>
+<tr>
+<th>Day</th>
+<th>模块</th>
+<th>核心任务</th>
+<th>产出</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Python 工程化</td>
+<td>类型系统、装饰器、配置管理、日志、项目骨架</td>
+<td>工程基础设施就绪</td>
+</tr>
+<tr>
+<td>2</td>
+<td>FastAPI 后端</td>
+<td>HTTP 协议、路由拆分、Pydantic 校验、LLM 集成</td>
+<td>后端 API 可用</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Vue 3 前端</td>
+<td>响应式系统、组件化、Vant UI、前后端联调</td>
+<td>前端骨架 + 问答界面</td>
+</tr>
+<tr>
+<td>4</td>
+<td>LLM 编程深入</td>
+<td>Prompt 工程、结构化输出、流式 SSE、语音接入</td>
+<td>对话体验优化</td>
+</tr>
+<tr>
+<td>5</td>
+<td>PDF 解析 + NLP</td>
+<td>PyMuPDF 解析、HanLP NER、实体消歧</td>
+<td>文献知识提取</td>
+</tr>
+<tr>
+<td>6</td>
+<td>RAG 检索</td>
+<td>分块策略、Embedding、ChromaDB、BM25 混合检索</td>
+<td>知识库检索可用</td>
+</tr>
+<tr>
+<td>7</td>
+<td>知识图谱</td>
+<td>Schema 设计、规则+LLM 三元组抽取、NetworkX 建图</td>
+<td>KG 可查询</td>
+</tr>
+<tr>
+<td>8</td>
+<td>多 Agent 理论</td>
+<td>单→多 Agent、LangGraph 状态图、Orchestrator 设计</td>
+<td>多 Agent 架构</td>
+</tr>
+<tr>
+<td>9</td>
+<td>专业 Agent 构建</td>
+<td>GeoAgent、KGAgent、RAGAgent、VideoAgent、SynthesisAgent</td>
+<td>5 个 Agent 就绪</td>
+</tr>
+<tr>
+<td>10</td>
+<td>Agent 编排</td>
+<td>LangGraph 完整图、并行执行、任务分解</td>
+<td>多 Agent 协作系统</td>
+</tr>
+<tr>
+<td>11</td>
+<td>调优 + 地图</td>
+<td>CritiqueAgent、高德地图集成、飞行定位、视频面板</td>
+<td>核心体验完善</td>
+</tr>
+<tr>
+<td>12</td>
+<td>系统集成</td>
+<td>全链路联调、错误处理、性能优化、语音输入</td>
+<td>系统稳定可用</td>
+</tr>
+<tr>
+<td>13</td>
+<td>Docker + 部署</td>
+<td>Dockerfile、docker-compose、Nginx、云服务器</td>
+<td>公网可访问</td>
+</tr>
+<tr>
+<td>14</td>
+<td>系统回顾</td>
+<td>数据流追踪、设计模式复盘、技术决策总结</td>
+<td>全局视角</td>
+</tr>
+<tr>
+<td>15</td>
+<td>秋招准备</td>
+<td>面试模拟、学习路线规划、项目文档完善</td>
+<td>可展示的完整项目</td>
+</tr>
+</tbody>
+</table>
+<h3>4.3 里程碑节点</h3>
+<table>
+<thead>
+<tr>
+<th>节点</th>
+<th>时间</th>
+<th>验证标准</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>M1: 后端可用</td>
+<td>Day 4 结束</td>
+<td><code>/api/v1/explore</code> 返回正确的 LLM 回答</td>
+</tr>
+<tr>
+<td>M2: 前端联调</td>
+<td>Day 5 结束</td>
+<td>前端发出请求→后端返回→前端展示</td>
+</tr>
+<tr>
+<td>M3: 知识库就绪</td>
+<td>Day 7 结束</td>
+<td>KG 可查询实体关系，RAG 可从 PDF 检索</td>
+</tr>
+<tr>
+<td>M4: 多 Agent 运行</td>
+<td>Day 10 结束</td>
+<td>Orchestrator 调度多 Agent 并行协作</td>
+</tr>
+<tr>
+<td>M5: 系统上线</td>
+<td>Day 13 结束</td>
+<td>手机浏览器可访问公网地址</td>
+</tr>
+</tbody>
+</table>
+<h3>4.4 风险与对策</h3>
+<table>
+<thead>
+<tr>
+<th>风险</th>
+<th>概率</th>
+<th>影响</th>
+<th>对策</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>DeepSeek API 不稳定</td>
+<td>低</td>
+<td>高</td>
+<td>配置备用 LLM（Qwen3 API）</td>
+</tr>
+<tr>
+<td>PDF 解析质量不足</td>
+<td>中</td>
+<td>中</td>
+<td>人工筛选高质量 PDF，跳过扫描版</td>
+</tr>
+<tr>
+<td>高德 API 限流</td>
+<td>低</td>
+<td>中</td>
+<td>本地缓存地理编码结果</td>
+</tr>
+<tr>
+<td>视频平台跨域限制</td>
+<td>中</td>
+<td>中</td>
+<td>降级为跳转链接 + AI 提前总结</td>
+</tr>
+<tr>
+<td>时间不足</td>
+<td>中</td>
+<td>高</td>
+<td>每个模块有降级方案（详见技术文档）</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<blockquote>
+<p><strong>项目信念</strong>：不只做一个"能回答问题"的工具，而是打造一个"在地图上学习地理"的全新体验——让每一个地理概念都能被看见、被理解。</p>
+</blockquote></body>
+</html>
